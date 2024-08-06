@@ -1,2 +1,2 @@
 @echo off
-powershell -File lck.ps1
+powershell -ExecutionPolicy Bypass -File lck.ps1
