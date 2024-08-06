@@ -71,7 +71,7 @@ function Encrypt-File { param ([string]$file, [int]$numOfBytes=32, [int]$offset=
         $reader = New-Object System.IO.BinaryReader($fs)
         $writer = New-Object System.IO.BinaryWriter($fs)
 
-        # Move to the end of the file to get the file size
+        # Get the file size
         $fsize = $fs.Length
 
         # Calculate the number of bytes to read
@@ -86,7 +86,7 @@ function Encrypt-File { param ([string]$file, [int]$numOfBytes=32, [int]$offset=
         # Encrypt the bytes
         for ($i = 0; $i -lt $qtdBytes; $i++) {
             $b = $newBytes[$i]
-            $b = Python-Modulus -dividend $($b + $Offset) -divisor 256
+            $b = Python-Modulus -dividend $($b + $offset) -divisor 256
             $newBytes[$i] = [byte]$b
         }
         
@@ -102,34 +102,23 @@ function Encrypt-File { param ([string]$file, [int]$numOfBytes=32, [int]$offset=
 }
 
 function Decrypt-File { param ([string]$file, [int]$numOfBytes=32, [int]$offset=22)
-    # Open the file stream for reading and writing
     $fs = [System.IO.File]::Open($file, 'Open', 'ReadWrite')
 
     try {
-        # Create a BinaryReader and BinaryWriter
         $reader = New-Object System.IO.BinaryReader($fs)
         $writer = New-Object System.IO.BinaryWriter($fs)
 
-        # Move to the end of the file to get the file size
         $fsize = $fs.Length
-
-        # Calculate the number of bytes to read
         $qtdBytes = [Math]::Min($numOfBytes, $fsize)
 
-        # Read the bytes
         $newBytes = $reader.ReadBytes($qtdBytes)
-
-        # Move to the start of the file to overwrite with decrypted bytes
         $fs.Seek(0, [System.IO.SeekOrigin]::Begin) | Out-Null
 
-        # Decrypt the bytes
         for ($i = 0; $i -lt $qtdBytes; $i++) {
             $b = $newBytes[$i]
-            $b = Python-Modulus -dividend $($b - $Offset) -divisor 256
+            $b = Python-Modulus -dividend $($b - $offset) -divisor 256
             $newBytes[$i] = [byte]$b
         }
-        
-        # Write the new bytes
         $writer.Write($newBytes)
     } catch { Write-Host "ERRO: $b" }
     finally {
@@ -141,7 +130,6 @@ function Decrypt-File { param ([string]$file, [int]$numOfBytes=32, [int]$offset=
 }
 
 function Gen-Keys { param ([string]$password, [int]$nameLength)
-    #$pw_list = $password.Split('')
     $k1 = 0
     $k2 = 0
     for ($i = 0; $i -lt $password.Length; $i++)
@@ -149,15 +137,12 @@ function Gen-Keys { param ([string]$password, [int]$nameLength)
         $curOp = ([int]$password[$i] + $nameLength) * ($i+1)
         $k1 += $curOp
         $k2 -= $curOp
-        #Write-Host $k1
     }
     $k1 = [char]((Python-Modulus -dividend $k1 -divisor 95) + 32)
     $k2 = [char]((Python-Modulus -dividend $k2 -divisor 95) + 32)
     $k1 = Handle-Win-Chars -c $k1 -mapin $True
     $k2 = Handle-Win-Chars -c $k2 -mapin $True
     
-    #Write-Host $k1
-    #Write-Host $k2
     return @($k1, $k2) -join ''
 }
 
@@ -166,12 +151,10 @@ function Encrypt { param ([string]$InitFolder, [string]$pass)
     $items = $items | Sort-Object { Get-Depth $_.FullName } -Descending
 
     $items | ForEach-Object {
-        #Write-Host $_.Name
         $fname = $_.FullName
         $relpath = Resolve-Path -LiteralPath $fname -Relative
         Write-Host "Encrypting: `"$relpath`""
 
-        #$keyy = Read-Host "TESTE KEY"
         $keys = Gen-Keys -password $pass -nameLength $_.Name.Length
         $finalName = (Encrypt-Name -s $_.Name) + $keys
 
@@ -200,7 +183,6 @@ function Decrypt { param ([string]$InitFolder, [string]$pass)
     $items = $items | Sort-Object { Get-Depth $_.FullName } -Descending
 
     $items | ForEach-Object {
-        #Write-Host $_.Name
         $fname = $_.FullName
         $relpath = Resolve-Path -LiteralPath $fname -Relative
         Write-Host "Decrypting: `"$relpath`""
@@ -211,7 +193,6 @@ function Decrypt { param ([string]$InitFolder, [string]$pass)
             return
         }
 
-        #$keyy = Read-Host "TESTE KEY"
         $keys = Gen-Keys -password $pass -nameLength $($_.Name.Length - 2)
         $actualKey = $_.Name.Substring($_.Name.Length - 2)
 
@@ -230,8 +211,6 @@ function Decrypt { param ([string]$InitFolder, [string]$pass)
         {
             Write-Host 'Failed (Invalid password)' -ForegroundColor Red
         }
-
-        #exit
     }
 
     Write-Host "`nItems decrypted.`n"
@@ -256,7 +235,6 @@ if (Test-Path -Path $jsonPath -PathType Leaf)
 }
 else
 {
-    #$jsonConfig = "Nao existe"
     $jsonConfig = [pscustomobject]@{ folder=""}
     $jsonModified = $True
 }
@@ -286,14 +264,12 @@ while ($retry)
     switch ($opt)
     {
         1 { 
-            #$mode = 1
             $pass = Read-Host "Type password to encrypt `"$($jsonConfig.folder)`" data"
             $pass = Encrypt-Name -s $pass
             Encrypt -InitFolder $jsonConfig.folder -pass $pass
         }
 
         2 { 
-            #$mode = 2
             $pass = Read-Host "Type password to decrypt `"$($jsonConfig.folder)`" data"
             $pass = Encrypt-Name -s $pass
             Decrypt -InitFolder $jsonConfig.folder -pass $pass
