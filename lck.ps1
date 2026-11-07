@@ -1,5 +1,5 @@
-# Use python method for modulus to handle negative values
-function Python-Modulus { param ([int]$dividend, [int]$divisor)
+# Use floor method for modulus for cycling negative values
+function Floor-Modulus { param ([int]$dividend, [int]$divisor)
     return [int]($dividend - [math]::Floor($dividend / $divisor) * $divisor)
 }
 
@@ -34,7 +34,7 @@ function Encrypt-Name { param ([string]$s)
         $c -= 32
         $c += $offset
         $c += $i
-        $c = Python-Modulus -dividend $c -divisor 95
+        $c = Floor-Modulus -dividend $c -divisor 95
         $c += 32
         $c = [char]$c
         $c = Handle-Win-Chars -c $c -mapin $true
@@ -54,7 +54,7 @@ function Decrypt-Name { param ([string]$s)
         $c -= 32
         $c -= $offset
         $c -= $i
-        $c = Python-Modulus -dividend $c -divisor 95
+        $c = Floor-Modulus -dividend $c -divisor 95
         $c += 32
         $c = [char]$c
         $clist += $c
@@ -86,7 +86,7 @@ function Encrypt-File { param ([string]$file, [int]$numOfBytes=32, [int]$offset=
         # Encrypt the bytes
         for ($i = 0; $i -lt $qtdBytes; $i++) {
             $b = $newBytes[$i]
-            $b = Python-Modulus -dividend $($b + $offset) -divisor 256
+            $b = Floor-Modulus -dividend $($b + $offset) -divisor 256
             $newBytes[$i] = [byte]$b
         }
         
@@ -116,7 +116,7 @@ function Decrypt-File { param ([string]$file, [int]$numOfBytes=32, [int]$offset=
 
         for ($i = 0; $i -lt $qtdBytes; $i++) {
             $b = $newBytes[$i]
-            $b = Python-Modulus -dividend $($b - $offset) -divisor 256
+            $b = Floor-Modulus -dividend $($b - $offset) -divisor 256
             $newBytes[$i] = [byte]$b
         }
         $writer.Write($newBytes)
@@ -138,8 +138,8 @@ function Gen-Keys { param ([string]$password, [int]$nameLength)
         $k1 += $curOp
         $k2 -= $curOp
     }
-    $k1 = [char]((Python-Modulus -dividend $k1 -divisor 95) + 32)
-    $k2 = [char]((Python-Modulus -dividend $k2 -divisor 95) + 32)
+    $k1 = [char]((Floor-Modulus -dividend $k1 -divisor 95) + 32)
+    $k2 = [char]((Floor-Modulus -dividend $k2 -divisor 95) + 32)
     $k1 = Handle-Win-Chars -c $k1 -mapin $True
     $k2 = Handle-Win-Chars -c $k2 -mapin $True
     
